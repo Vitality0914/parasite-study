@@ -41,7 +41,7 @@ check(semantleHtml.includes('id="suggestions"') && semantleApp.includes("difficu
 const typingApp = fs.readFileSync(path.join(root, 'typing/app.js'), 'utf8');
 const typingHtml = fs.readFileSync(path.join(root, 'typing/index.html'), 'utf8');
 check(typingHtml.includes('id="passCard"') && typingApp.includes('function passCard()'), 'typing pass behavior missing');
-check(typingApp.includes('오답 — 정답:') && typingApp.includes('scheduleAdvance(1400)'), 'typing reveal-and-advance behavior missing');
+check(typingApp.includes('오답 — 정답:') && typingApp.includes('scheduleAdvance(1000)'), 'typing reveal-and-advance behavior missing');
 
 console.log(JSON.stringify({
   requiredFiles: required.length,

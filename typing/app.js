@@ -243,7 +243,7 @@
       setFeedback(`오답 — 정답: ${card.scientificName}`, 'error');
       renderRecent();
       renderStats();
-      scheduleAdvance(1400);
+      scheduleAdvance(1000);
     }
   }
 
@@ -258,7 +258,7 @@
     setFeedback(`패스 — 정답: ${card.scientificName}`, 'skip');
     renderRecent();
     renderStats();
-    scheduleAdvance(1400);
+    scheduleAdvance(1000);
   }
 
   function scheduleAdvance(delay) {
