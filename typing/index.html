@@ -50,7 +50,8 @@
         <form class="answer-form" id="answerForm" autocomplete="off">
           <label class="sr-only" for="answerInput">영문 학명</label>
           <input id="answerInput" type="text" placeholder="Genus species" inputmode="text" spellcheck="false" disabled>
-          <button class="primary-button" type="submit" disabled>확인</button>
+          <button class="primary-button" id="answerButton" type="submit" disabled>확인</button>
+          <button class="secondary-button pass-button" id="passCard" type="button" disabled>패스</button>
         </form>
         <div class="feedback" id="feedback" role="status" aria-live="assertive"></div>
 
@@ -68,13 +69,13 @@
 
         <section class="recent-section" aria-labelledby="recentTitle">
           <div class="section-heading">
-            <div><span class="section-kicker">JUST COMPLETED</span><h2 id="recentTitle">최근 정답</h2></div>
+            <div><span class="section-kicker">JUST COMPLETED</span><h2 id="recentTitle">최근 학습</h2></div>
             <span id="recentCount">0개</span>
           </div>
           <div class="recent-list" id="recentList"></div>
           <div class="empty-state" id="emptyState">
             <strong>아직 완료한 카드가 없습니다.</strong>
-            <p>정확한 학명을 입력하면 여기에 최근 학습 기록이 쌓입니다.</p>
+            <p>답을 입력하거나 패스하면 여기에 최근 학습 기록이 쌓입니다.</p>
           </div>
         </section>
       </section>
@@ -87,6 +88,7 @@
           <div class="metric-grid">
             <div><strong id="correctCount">0</strong><span>정답</span></div>
             <div><strong id="wrongCount">0</strong><span>오답</span></div>
+            <div><strong id="skippedCount">0</strong><span>패스</span></div>
             <div><strong id="accuracyValue">—</strong><span>정확도</span></div>
             <div><strong id="streakValue">0</strong><span>연속 정답</span></div>
           </div>
@@ -94,7 +96,7 @@
 
         <div class="rule-card">
           <span class="section-kicker">ONE RULE</span>
-          <p><strong>정답일 때만 다음으로.</strong> 대소문자는 구분하지 않지만 철자와 띄어쓰기는 정확해야 합니다.</p>
+          <p><strong>한 번 입력하고 다음으로.</strong> 오답이나 패스 후에는 정답 학명을 확인하고 다음 카드로 이동합니다.</p>
         </div>
       </aside>
 
@@ -132,8 +134,9 @@
       <ol class="help-list">
         <li><span>01</span><p>처음에 연습할 강의를 체크합니다.</p></li>
         <li><span>02</span><p>표시된 한글 이름에 해당하는 영문 학명을 입력합니다.</p></li>
-        <li><span>03</span><p>정답이면 다음 카드로, 오답이면 같은 카드로 돌아갑니다.</p></li>
-        <li><span>04</span><p>선택 범위를 한 바퀴 마치면 결과를 확인하고 다시 섞을 수 있습니다.</p></li>
+        <li><span>03</span><p>오답이면 정답을 확인한 뒤 다음 카드로 이동합니다.</p></li>
+        <li><span>04</span><p>모르겠다면 패스하고 정답을 확인할 수 있습니다.</p></li>
+        <li><span>05</span><p>선택 범위를 한 바퀴 마치면 결과를 확인하고 다시 섞을 수 있습니다.</p></li>
       </ol>
       <button class="primary-button full-button" value="cancel">연습으로 돌아가기</button>
     </form>

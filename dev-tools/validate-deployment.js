@@ -7,6 +7,7 @@ const errors = [];
 const check = (condition, message) => { if (!condition) errors.push(message); };
 const required = [
   'index.html', 'styles.css', '.nojekyll',
+  'assets/fonts/PretendardVariable.woff2', 'assets/fonts/LICENSE.txt',
   'semantle/index.html', 'semantle/styles.css', 'semantle/app.js', 'semantle/data.js',
   'typing/index.html', 'typing/styles.css', 'typing/app.js', 'typing/data.js',
 ];
@@ -38,7 +39,9 @@ const semantleApp = fs.readFileSync(path.join(root, 'semantle/app.js'), 'utf8');
 check(semantleHtml.includes('value="easy"') && semantleHtml.includes('value="hard"'), 'difficulty controls missing');
 check(semantleHtml.includes('id="suggestions"') && semantleApp.includes("difficulty !== 'easy'"), 'Easy suggestions missing');
 const typingApp = fs.readFileSync(path.join(root, 'typing/app.js'), 'utf8');
-check(typingApp.includes('틀렸습니다. 같은 학명을 다시 입력하세요.'), 'typing retry behavior missing');
+const typingHtml = fs.readFileSync(path.join(root, 'typing/index.html'), 'utf8');
+check(typingHtml.includes('id="passCard"') && typingApp.includes('function passCard()'), 'typing pass behavior missing');
+check(typingApp.includes('오답 — 정답:') && typingApp.includes('scheduleAdvance(1400)'), 'typing reveal-and-advance behavior missing');
 
 console.log(JSON.stringify({
   requiredFiles: required.length,

@@ -32,7 +32,8 @@
   const els = {
     answerForm: document.getElementById('answerForm'),
     answerInput: document.getElementById('answerInput'),
-    answerButton: document.querySelector('#answerForm button'),
+    answerButton: document.getElementById('answerButton'),
+    passButton: document.getElementById('passCard'),
     questionCard: document.getElementById('questionCard'),
     koreanPrompt: document.getElementById('koreanPrompt'),
     macroBadge: document.getElementById('macroBadge'),
@@ -48,6 +49,7 @@
     progressBar: document.getElementById('progressBar'),
     correctCount: document.getElementById('correctCount'),
     wrongCount: document.getElementById('wrongCount'),
+    skippedCount: document.getElementById('skippedCount'),
     accuracyValue: document.getElementById('accuracyValue'),
     streakValue: document.getElementById('streakValue'),
     completionCard: document.getElementById('completionCard'),
@@ -72,6 +74,7 @@
   let position = 0;
   let correct = 0;
   let wrong = 0;
+  let skipped = 0;
   let streak = 0;
   let recent = [];
   let advanceTimer = null;
@@ -119,6 +122,7 @@
     locked = !enabled;
     els.answerInput.disabled = !enabled;
     els.answerButton.disabled = !enabled;
+    els.passButton.disabled = !enabled;
     els.restartDeck.disabled = !setupComplete;
   }
 
@@ -133,13 +137,13 @@
     position = 0;
     correct = 0;
     wrong = 0;
+    skipped = 0;
     streak = 0;
     recent = [];
     els.completionCard.hidden = true;
     els.questionCard.hidden = false;
     els.answerForm.hidden = false;
     els.answerInput.value = '';
-    delete els.answerInput.dataset.misses;
     setFeedback('');
     renderRecent();
     renderStats();
@@ -154,7 +158,7 @@
       finishRound();
       return;
     }
-    els.questionCard.classList.remove('correct', 'wrong');
+    els.questionCard.classList.remove('correct', 'wrong', 'skipped');
     els.macroBadge.textContent = card.macro;
     els.lectureBadge.textContent = card.lecture;
     els.koreanPrompt.textContent = card.koreanName;
@@ -163,13 +167,14 @@
   }
 
   function renderStats() {
-    const totalAttempts = correct + wrong;
-    const accuracy = totalAttempts ? `${Math.round((correct / totalAttempts) * 100)}%` : '—';
-    const progress = deck.length ? (correct / deck.length) * 100 : 0;
-    els.progressText.textContent = `${correct} / ${deck.length}`;
+    const completed = correct + wrong + skipped;
+    const accuracy = completed ? `${Math.round((correct / completed) * 100)}%` : '—';
+    const progress = deck.length ? (completed / deck.length) * 100 : 0;
+    els.progressText.textContent = `${completed} / ${deck.length}`;
     els.progressBar.style.width = `${progress}%`;
     els.correctCount.textContent = String(correct);
     els.wrongCount.textContent = String(wrong);
+    els.skippedCount.textContent = String(skipped);
     els.accuracyValue.textContent = accuracy;
     els.streakValue.textContent = String(streak);
   }
@@ -177,12 +182,15 @@
   function renderRecent() {
     els.emptyState.hidden = recent.length > 0;
     els.recentCount.textContent = `${recent.length}개`;
-    els.recentList.innerHTML = recent.map((item, index) => {
+    els.recentList.innerHTML = recent.map((item) => {
       const card = cards[item.cardIndex];
-      return `<article class="recent-item">
-        <span>✓</span>
+      const outcome = item.outcome || 'correct';
+      const symbol = outcome === 'correct' ? '✓' : outcome === 'wrong' ? '×' : '→';
+      const label = outcome === 'correct' ? '정답' : outcome === 'wrong' ? '오답' : '패스';
+      return `<article class="recent-item ${outcome}">
+        <span>${symbol}</span>
         <div><strong>${escapeHtml(card.koreanName)}</strong><em>${escapeHtml(card.scientificName)}</em></div>
-        <small>${item.tries === 1 ? '한 번에 정답' : `${item.tries}번 시도`}</small>
+        <small>${label}</small>
       </article>`;
     }).join('');
   }
@@ -192,9 +200,9 @@
     els.questionCard.hidden = true;
     els.answerForm.hidden = true;
     setFeedback('');
-    const attempts = correct + wrong;
-    const accuracy = attempts ? Math.round((correct / attempts) * 100) : 100;
-    els.completionSummary.textContent = `${correct}개 학명 완료 · 오답 ${wrong}회 · 정확도 ${accuracy}%`;
+    const completed = correct + wrong + skipped;
+    const accuracy = completed ? Math.round((correct / completed) * 100) : 100;
+    els.completionSummary.textContent = `정답 ${correct}개 · 오답 ${wrong}개 · 패스 ${skipped}개 · 정확도 ${accuracy}%`;
     els.completionCard.hidden = false;
   }
 
@@ -219,37 +227,53 @@
     if (submitted === scientificKey(card.scientificName)) {
       correct += 1;
       streak += 1;
-      const priorWrongForCurrent = Number(els.answerInput.dataset.misses || 0);
-      recent.unshift({ cardIndex: deck[position], tries: priorWrongForCurrent + 1 });
+      recent.unshift({ cardIndex: deck[position], outcome: 'correct' });
       recent = recent.slice(0, 8);
-      delete els.answerInput.dataset.misses;
       els.questionCard.classList.add('correct');
       setFeedback(`정답 — ${card.scientificName}`, 'success');
-      setInputEnabled(false);
       renderRecent();
       renderStats();
-      advanceTimer = setTimeout(() => {
-        position += 1;
-        if (position >= deck.length) finishRound();
-        else {
-          renderQuestion();
-          setFeedback('');
-          setInputEnabled(true);
-          els.answerInput.focus();
-        }
-      }, 720);
+      scheduleAdvance(720);
     } else {
       wrong += 1;
       streak = 0;
-      els.answerInput.dataset.misses = String(Number(els.answerInput.dataset.misses || 0) + 1);
-      els.questionCard.classList.remove('wrong');
-      void els.questionCard.offsetWidth;
+      recent.unshift({ cardIndex: deck[position], outcome: 'wrong' });
+      recent = recent.slice(0, 8);
       els.questionCard.classList.add('wrong');
-      setFeedback('틀렸습니다. 같은 학명을 다시 입력하세요.', 'error');
-      els.answerInput.value = '';
+      setFeedback(`오답 — 정답: ${card.scientificName}`, 'error');
+      renderRecent();
       renderStats();
-      els.answerInput.focus();
+      scheduleAdvance(1400);
     }
+  }
+
+  function passCard() {
+    if (locked || !currentCard()) return;
+    const card = currentCard();
+    skipped += 1;
+    streak = 0;
+    recent.unshift({ cardIndex: deck[position], outcome: 'skipped' });
+    recent = recent.slice(0, 8);
+    els.questionCard.classList.add('skipped');
+    setFeedback(`패스 — 정답: ${card.scientificName}`, 'skip');
+    renderRecent();
+    renderStats();
+    scheduleAdvance(1400);
+  }
+
+  function scheduleAdvance(delay) {
+    setInputEnabled(false);
+    clearTimeout(advanceTimer);
+    advanceTimer = setTimeout(() => {
+      position += 1;
+      if (position >= deck.length) finishRound();
+      else {
+        renderQuestion();
+        setFeedback('');
+        setInputEnabled(true);
+        els.answerInput.focus();
+      }
+    }, delay);
   }
 
   function lectureGroups() {
@@ -326,6 +350,7 @@
   els.answerInput.addEventListener('input', (event) => { if (!event.isComposing) sanitizeInput(); });
   els.answerInput.addEventListener('compositionend', sanitizeInput);
   els.answerForm.addEventListener('submit', (event) => { event.preventDefault(); submitAnswer(); });
+  els.passButton.addEventListener('click', passCard);
   els.restartDeck.addEventListener('click', () => {
     if (setupComplete && window.confirm('현재 기록을 지우고 카드를 다시 섞을까요?')) startRound();
   });
