@@ -41,6 +41,12 @@ check(practiceData.cards.length === 90, 'invalid typing practice data');
 
 const semantleHtml = fs.readFileSync(path.join(root, 'semantle/index.html'), 'utf8');
 const semantleApp = fs.readFileSync(path.join(root, 'semantle/app.js'), 'utf8');
+const frontHtml = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+const practiceCardPosition = frontHtml.indexOf('./typing-practice/index.html');
+const testCardPosition = frontHtml.indexOf('./typing/index.html');
+const semantleCardPosition = frontHtml.indexOf('./semantle/index.html');
+check(practiceCardPosition >= 0 && practiceCardPosition < testCardPosition && testCardPosition < semantleCardPosition, 'front page game order is invalid');
+check(frontHtml.includes('mode-card practice-card') && frontHtml.includes('mode-card typing-card') && frontHtml.includes('mode-card semantle-card'), 'front page game colors are not mapped');
 check(semantleHtml.includes('value="easy"') && semantleHtml.includes('value="hard"'), 'difficulty controls missing');
 check(semantleHtml.includes('id="suggestions"') && semantleApp.includes("difficulty !== 'easy'"), 'Easy suggestions missing');
 const typingApp = fs.readFileSync(path.join(root, 'typing/app.js'), 'utf8');
