@@ -47,6 +47,8 @@ const testCardPosition = frontHtml.indexOf('./typing/index.html');
 const semantleCardPosition = frontHtml.indexOf('./semantle/index.html');
 check(practiceCardPosition >= 0 && practiceCardPosition < testCardPosition && testCardPosition < semantleCardPosition, 'front page game order is invalid');
 check(frontHtml.includes('mode-card practice-card') && frontHtml.includes('mode-card typing-card') && frontHtml.includes('mode-card semantle-card'), 'front page game colors are not mapped');
+const frontStyles = fs.readFileSync(path.join(root, 'styles.css'), 'utf8');
+check(frontStyles.includes('.practice-card { --mode-accent: var(--coral)') && frontStyles.includes('.typing-card { --mode-accent: var(--forest)') && frontStyles.includes('.semantle-card { --mode-accent: #6574a8'), 'front page color order is invalid');
 check(semantleHtml.includes('value="easy"') && semantleHtml.includes('value="hard"'), 'difficulty controls missing');
 check(semantleHtml.includes('id="suggestions"') && semantleApp.includes("difficulty !== 'easy'"), 'Easy suggestions missing');
 const typingApp = fs.readFileSync(path.join(root, 'typing/app.js'), 'utf8');
