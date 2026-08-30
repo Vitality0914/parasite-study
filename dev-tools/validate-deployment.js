@@ -20,8 +20,9 @@ for (const relativeHtml of ['index.html', 'semantle/index.html', 'typing/index.h
   const refs = [...html.matchAll(/(?:src|href)="([^"#]+)"/g)].map((match) => match[1]);
   for (const ref of refs) {
     if (/^(?:https?:|data:|mailto:)/.test(ref)) continue;
-    let resolved = path.resolve(path.dirname(htmlPath), ref);
-    if (ref.endsWith('/')) resolved = path.join(resolved, 'index.html');
+    const fileRef = ref.split('?')[0];
+    let resolved = path.resolve(path.dirname(htmlPath), fileRef);
+    if (fileRef.endsWith('/')) resolved = path.join(resolved, 'index.html');
     check(fs.existsSync(resolved), `broken reference ${relativeHtml} -> ${ref}`);
   }
 }
