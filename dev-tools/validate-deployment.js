@@ -56,11 +56,18 @@ const typingApp = fs.readFileSync(path.join(root, 'typing/app.js'), 'utf8');
 const typingHtml = fs.readFileSync(path.join(root, 'typing/index.html'), 'utf8');
 check(typingHtml.includes('id="passCard"') && typingApp.includes('function passCard()'), 'typing pass behavior missing');
 check(typingApp.includes('오답 — 정답:') && typingApp.includes('scheduleAdvance(1000)'), 'typing reveal-and-advance behavior missing');
+check(typingHtml.includes('name="writingMode" value="ko-to-en"') && typingHtml.includes('name="writingMode" value="en-to-ko"'), 'typing direction controls missing');
+check(!/name="writingMode"[^>]*checked/.test(typingHtml), 'typing direction must start unselected');
+check(typingApp.includes("window.alert('쓰기 모드를 선택해 주세요.')") && typingApp.includes("writingMode === 'en-to-ko'"), 'typing direction validation missing');
 const practiceApp = fs.readFileSync(path.join(root, 'typing-practice/app.js'), 'utf8');
 const practiceHtml = fs.readFileSync(path.join(root, 'typing-practice/index.html'), 'utf8');
 check(practiceHtml.includes('id="scientificPrompt"') && practiceApp.includes('els.scientificPrompt.textContent = card.scientificName'), 'typing practice scientific-name prompt missing');
-check(practiceApp.includes('parasite-typing-practice-lectures') && !typingApp.includes('parasite-typing-practice-lectures'), 'typing practice storage isolation missing');
+check(practiceApp.includes('parasite-typing-practice-cards') && !typingApp.includes('parasite-typing-practice-cards'), 'typing practice storage isolation missing');
 check(practiceHtml.includes('id="passCard"') && practiceApp.includes('scheduleAdvance(1000)'), 'typing practice shared behavior missing');
+for (const [name, app] of [['semantle', semantleApp], ['typing', typingApp], ['typing-practice', practiceApp]]) {
+  check(app.includes('class="lecture-toggle"') && app.includes('class="parasite-check-input"'), `${name} per-parasite selector missing`);
+  check(app.includes('draftCardIds') && app.includes('syncLectureMasters'), `${name} selector state sync missing`);
+}
 
 console.log(JSON.stringify({
   requiredFiles: required.length,

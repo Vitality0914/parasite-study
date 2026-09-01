@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#123c35">
   <meta name="description" content="90종의 기생충과 의용곤충을 유사도로 추리하며 복습하는 기생충학 꼬맨틀">
   <title>기생충 꼬맨틀</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=20260901-1">
 </head>
 <body>
   <a class="skip-link" href="#guessInput">입력창으로 바로가기</a>
@@ -32,7 +32,7 @@
             <p>등록된 학명을 입력하세요. 가까운 종일수록 점수가 높습니다.</p>
           </div>
           <button class="scope-button" id="openScope" type="button" aria-haspopup="dialog">
-            <span>선택한 강의</span>
+            <span>선택한 범위</span>
             <strong id="scopeSummary">선택 전</strong>
           </button>
         </div>
@@ -148,7 +148,7 @@
         <div><span class="section-kicker">STUDY SCOPE</span><h2>학습 범위 설정</h2></div>
         <button class="icon-button" id="scopeClose" value="cancel" aria-label="닫기">×</button>
       </div>
-      <p class="modal-description">게임을 시작하기 전에 학습할 강의를 선택하세요. 선택한 강의에서만 정답이 출제되고 입력 가능한 학명도 함께 좁아집니다.</p>
+      <p class="modal-description">강의를 선택하고, 오른쪽 토글을 열어 강의 안의 특정 기생충만 고를 수도 있습니다. 선택한 기생충 안에서만 정답이 출제됩니다.</p>
       <fieldset class="difficulty-options">
         <legend>난도</legend>
         <label class="difficulty-card">
@@ -195,6 +195,6 @@
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script src="data.js"></script>
-  <script src="app.js"></script>
+  <script src="app.js?v=20260901-1"></script>
 </body>
 </html>

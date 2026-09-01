@@ -27,8 +27,6 @@
     { key: '19', number: 19, title: '19강', topic: '의용곤충', macro: '의용곤충' },
     { key: 'unassigned', number: null, title: '미지정', topic: '추가 원충', macro: '원충' },
   ];
-  const lectureByKey = new Map(lectures.map((lecture) => [lecture.key, lecture]));
-  const allLectureKeys = lectures.map((lecture) => lecture.key);
   const exactScientificNames = new Map(cards.map((card, index) => [scientificKey(card.scientificName), index]));
 
   const els = {
@@ -66,7 +64,10 @@
     toast: document.getElementById('toast'),
   };
 
-  let activeLectures = new Set(allLectureKeys);
+  const allCardIds = cards.map((card) => String(card.id));
+  const validCardIds = new Set(allCardIds);
+  let activeCardIds = new Set(allCardIds);
+  let draftCardIds = new Set(allCardIds);
   let difficulty = 'hard';
   let setupComplete = false;
   let answerIndex = null;
@@ -111,7 +112,7 @@
   }
 
   function cardInScope(card) {
-    return cardLectureKeys(card).some((key) => activeLectures.has(key));
+    return activeCardIds.has(String(card.id));
   }
 
   function eligibleIndices() {
@@ -171,10 +172,6 @@
       node.setAttribute('aria-selected', String(active));
       if (active) node.scrollIntoView({ block: 'nearest' });
     });
-  }
-
-  function countCardsForLecture(key) {
-    return cards.filter((card) => cardLectureKeys(card).includes(key)).length;
   }
 
   function buildRankings() {
@@ -422,37 +419,58 @@
   function renderLectureOptions() {
     els.lectureOptions.innerHTML = lectureGroups().map((group) => `<section class="lecture-group">
       <h3>${escapeHtml(group.macro)}</h3>
-      <div class="lecture-checks">${group.items.map((lecture) => `<label class="lecture-check">
-        <input type="checkbox" value="${lecture.key}" ${activeLectures.has(lecture.key) ? 'checked' : ''}>
-        <span><strong>${escapeHtml(lecture.title)}</strong><small>${escapeHtml(lecture.topic)}</small></span>
-        <em>${countCardsForLecture(lecture.key)}종</em>
-      </label>`).join('')}</div>
+      <div class="lecture-checks">${group.items.map((lecture) => {
+        const lectureCardIds = cardIdsForLecture(lecture.key);
+        const selectedCount = lectureCardIds.filter((id) => draftCardIds.has(id)).length;
+        return `<div class="lecture-block">
+          <div class="lecture-row">
+            <label class="lecture-check">
+              <input class="lecture-master" type="checkbox" data-lecture="${lecture.key}" ${selectedCount === lectureCardIds.length ? 'checked' : ''}>
+              <span><strong>${escapeHtml(lecture.title)}</strong><small>${escapeHtml(lecture.topic)}</small></span>
+              <em>${selectedCount}/${lectureCardIds.length}종</em>
+            </label>
+            <button class="lecture-toggle" type="button" data-lecture="${lecture.key}" aria-expanded="false" aria-label="${escapeHtml(lecture.title)} 기생충 목록 열기">⌄</button>
+          </div>
+          <div class="parasite-options" data-panel="${lecture.key}" hidden>${lectureCardIds.map((id) => {
+            const card = cards.find((item) => String(item.id) === id);
+            return `<label class="parasite-check"><input class="parasite-check-input" type="checkbox" data-card-id="${id}" ${draftCardIds.has(id) ? 'checked' : ''}><span><strong>${escapeHtml(card.koreanName)}</strong><em>${escapeHtml(card.scientificName)}</em></span></label>`;
+          }).join('')}</div>
+        </div>`;
+      }).join('')}</div>
     </section>`).join('');
+    syncLectureMasters();
     updateScopeCount();
   }
 
-  function selectedLectureKeysFromDialog() {
-    return [...els.lectureOptions.querySelectorAll('input:checked')].map((input) => input.value);
+  function cardIdsForLecture(key) {
+    return cards.filter((card) => cardLectureKeys(card).includes(key)).map((card) => String(card.id));
   }
 
-  function countCardsForKeys(keys) {
-    const selected = new Set(keys);
-    return cards.filter((card) => cardLectureKeys(card).some((key) => selected.has(key))).length;
+  function syncLectureMasters() {
+    els.lectureOptions.querySelectorAll('.lecture-master').forEach((input) => {
+      const ids = cardIdsForLecture(input.dataset.lecture);
+      const count = ids.filter((id) => draftCardIds.has(id)).length;
+      input.checked = count === ids.length;
+      input.indeterminate = count > 0 && count < ids.length;
+      input.closest('.lecture-check').querySelector('em').textContent = `${count}/${ids.length}종`;
+    });
+    els.lectureOptions.querySelectorAll('.parasite-check-input').forEach((input) => {
+      input.checked = draftCardIds.has(input.dataset.cardId);
+    });
   }
 
   function updateScopeCount() {
-    const selected = selectedLectureKeysFromDialog();
-    const count = countCardsForKeys(selected);
-    els.scopeCount.textContent = `${selected.length}개 강의 · ${count}종`;
-    els.applyScope.disabled = count === 0;
+    const fullLectures = lectures.filter((lecture) => cardIdsForLecture(lecture.key).every((id) => draftCardIds.has(id))).length;
+    els.scopeCount.textContent = `${fullLectures}개 강의 전체 · ${draftCardIds.size}종 선택`;
+    els.applyScope.disabled = draftCardIds.size === 0;
   }
 
   function updateScopeSummary() {
     const count = eligibleIndices().length;
     const mode = difficulty === 'easy' ? 'Easy' : 'Hard';
     if (!setupComplete) els.scopeSummary.textContent = '선택 전';
-    else if (activeLectures.size === allLectureKeys.length) els.scopeSummary.textContent = `${mode} · 전체 ${count}종`;
-    else els.scopeSummary.textContent = `${mode} · ${activeLectures.size}강 · ${count}종`;
+    else if (activeCardIds.size === cards.length) els.scopeSummary.textContent = `${mode} · 전체 ${count}종`;
+    else els.scopeSummary.textContent = `${mode} · ${count}종 선택`;
   }
 
   function renderCatalog() {
@@ -540,6 +558,7 @@
   els.openHelp.addEventListener('click', () => els.helpDialog.showModal());
   els.openScope.addEventListener('click', () => {
     hideSuggestions();
+    draftCardIds = new Set(activeCardIds);
     renderLectureOptions();
     const difficultyInput = els.scopeForm.querySelector(`input[name="difficulty"][value="${difficulty}"]`);
     if (difficultyInput) difficultyInput.checked = true;
@@ -548,24 +567,43 @@
     els.applyScope.textContent = setupComplete ? '범위 적용하고 새 문제' : '이 범위로 시작';
     els.scopeDialog.showModal();
   });
-  els.lectureOptions.addEventListener('change', updateScopeCount);
+  els.lectureOptions.addEventListener('click', (event) => {
+    const button = event.target.closest('.lecture-toggle');
+    if (!button) return;
+    const panel = els.lectureOptions.querySelector(`[data-panel="${button.dataset.lecture}"]`);
+    const expanded = button.getAttribute('aria-expanded') === 'true';
+    button.setAttribute('aria-expanded', String(!expanded));
+    button.textContent = expanded ? '⌄' : '⌃';
+    panel.hidden = expanded;
+  });
+  els.lectureOptions.addEventListener('change', (event) => {
+    if (event.target.matches('.lecture-master')) {
+      cardIdsForLecture(event.target.dataset.lecture).forEach((id) => {
+        if (event.target.checked) draftCardIds.add(id); else draftCardIds.delete(id);
+      });
+    } else if (event.target.matches('.parasite-check-input')) {
+      if (event.target.checked) draftCardIds.add(event.target.dataset.cardId);
+      else draftCardIds.delete(event.target.dataset.cardId);
+    }
+    syncLectureMasters();
+    updateScopeCount();
+  });
   els.scopeForm.querySelectorAll('[data-preset]').forEach((button) => {
     button.addEventListener('click', () => {
-      const checked = button.dataset.preset === 'all';
-      els.lectureOptions.querySelectorAll('input').forEach((input) => { input.checked = checked; });
+      draftCardIds = button.dataset.preset === 'all' ? new Set(allCardIds) : new Set();
+      syncLectureMasters();
       updateScopeCount();
     });
   });
   els.applyScope.addEventListener('click', (event) => {
     event.preventDefault();
-    const selected = selectedLectureKeysFromDialog();
-    if (!selected.length) return;
-    activeLectures = new Set(selected);
+    if (!draftCardIds.size) return;
+    activeCardIds = new Set(draftCardIds);
     difficulty = els.scopeForm.querySelector('input[name="difficulty"]:checked')?.value || 'hard';
     setupComplete = true;
     updateScopeSummary();
     els.scopeDialog.close();
-    try { localStorage.setItem('parasite-semantle-lectures', JSON.stringify(selected)); } catch (_) { /* optional preference */ }
+    try { localStorage.setItem('parasite-semantle-cards', JSON.stringify([...activeCardIds])); } catch (_) { /* optional preference */ }
     try { localStorage.setItem('parasite-semantle-difficulty', difficulty); } catch (_) { /* optional preference */ }
     const preferred = sharedAnswerIndex !== null && cardInScope(cards[sharedAnswerIndex]) ? sharedAnswerIndex : null;
     startGame(preferred, preferred !== null);
@@ -588,14 +626,15 @@
   });
 
   try {
-    const saved = JSON.parse(localStorage.getItem('parasite-semantle-lectures'));
-    if (Array.isArray(saved) && saved.length && saved.every((key) => lectureByKey.has(key))) activeLectures = new Set(saved);
+    const saved = JSON.parse(localStorage.getItem('parasite-semantle-cards'));
+    if (Array.isArray(saved) && saved.length && saved.every((id) => validCardIds.has(String(id)))) activeCardIds = new Set(saved.map(String));
   } catch (_) { /* local storage is optional */ }
   try {
     const savedDifficulty = localStorage.getItem('parasite-semantle-difficulty');
     if (savedDifficulty === 'easy' || savedDifficulty === 'hard') difficulty = savedDifficulty;
   } catch (_) { /* local storage is optional */ }
 
+  draftCardIds = new Set(activeCardIds);
   renderLectureOptions();
   renderCatalog();
   updateScopeSummary();

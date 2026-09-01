@@ -168,6 +168,18 @@ footer { display: flex; justify-content: space-between; padding: 22px 0 30px; bo
 .lecture-check strong { display: block; font-size: 11px; }
 .lecture-check small { display: block; overflow: hidden; margin-top: 1px; color: var(--muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
 .lecture-check em { color: var(--muted); font-size: 9px; font-style: normal; }
+.lecture-block { overflow: hidden; border: 1px solid transparent; border-radius: 10px; }
+.lecture-block:has(.lecture-toggle[aria-expanded="true"]) { border-color: var(--line); }
+.lecture-row { display: grid; grid-template-columns: minmax(0,1fr) 34px; align-items: center; }
+.lecture-toggle { width: 30px; height: 30px; padding: 0; border: 1px solid var(--line); border-radius: 8px; background: white; color: var(--forest); cursor: pointer; font-size: 15px; font-weight: 800; }
+.lecture-toggle:hover { background: var(--mint-2); }
+.parasite-options { display: grid; gap: 3px; padding: 7px; border-top: 1px solid var(--line); background: rgba(255,255,255,.55); }
+.parasite-check { display: grid; grid-template-columns: auto minmax(0,1fr); gap: 8px; align-items: start; padding: 7px; border-radius: 7px; cursor: pointer; }
+.parasite-check:hover, .parasite-check:has(input:checked) { background: var(--mint-2); }
+.parasite-check input { margin-top: 3px; accent-color: var(--forest); }
+.parasite-check strong, .parasite-check em { display: block; overflow-wrap: anywhere; }
+.parasite-check strong { font-size: 10px; }
+.parasite-check em { margin-top: 2px; color: var(--muted); font-family: var(--font-serif); font-size: 10px; }
 .scope-count { margin-top: 12px; color: var(--muted); font-size: 11px; text-align: right; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 22px; }
 .help-list { display: grid; gap: 12px; margin: 22px 0; padding: 0; list-style: none; }
