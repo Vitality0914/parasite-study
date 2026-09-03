@@ -103,6 +103,78 @@
     return writingMode === 'en-to-ko' ? card.koreanName : card.scientificName;
   }
 
+  function buildCharacterDiff(learnerAnswer, correctAnswer, ignoreCase) {
+    const learnerChars = Array.from(String(learnerAnswer).trim());
+    const correctChars = Array.from(String(correctAnswer).trim());
+    const learnerKeys = learnerChars.map((char) => ignoreCase ? char.toLowerCase() : char);
+    const correctKeys = correctChars.map((char) => ignoreCase ? char.toLowerCase() : char);
+    const rows = learnerChars.length + 1;
+    const columns = correctChars.length + 1;
+    const distance = Array.from({ length: rows }, () => Array(columns).fill(0));
+    for (let row = 0; row < rows; row += 1) distance[row][0] = row;
+    for (let column = 0; column < columns; column += 1) distance[0][column] = column;
+    for (let row = 1; row < rows; row += 1) {
+      for (let column = 1; column < columns; column += 1) {
+        const substitution = learnerKeys[row - 1] === correctKeys[column - 1] ? 0 : 1;
+        distance[row][column] = Math.min(
+          distance[row - 1][column] + 1,
+          distance[row][column - 1] + 1,
+          distance[row - 1][column - 1] + substitution,
+        );
+      }
+    }
+
+    const operations = [];
+    let row = learnerChars.length;
+    let column = correctChars.length;
+    while (row > 0 || column > 0) {
+      if (row > 0 && column > 0 && learnerKeys[row - 1] === correctKeys[column - 1]
+        && distance[row][column] === distance[row - 1][column - 1]) {
+        operations.unshift({ type: 'equal', learner: learnerChars[row - 1], correct: correctChars[column - 1] });
+        row -= 1;
+        column -= 1;
+      } else if (row > 0 && column > 0 && distance[row][column] === distance[row - 1][column - 1] + 1) {
+        operations.unshift({ type: 'change', learner: learnerChars[row - 1], correct: correctChars[column - 1] });
+        row -= 1;
+        column -= 1;
+      } else if (row > 0 && distance[row][column] === distance[row - 1][column] + 1) {
+        operations.unshift({ type: 'change', learner: learnerChars[row - 1], correct: '' });
+        row -= 1;
+      } else {
+        operations.unshift({ type: 'change', learner: '', correct: correctChars[column - 1] });
+        column -= 1;
+      }
+    }
+
+    function renderSide(side) {
+      let html = '';
+      let buffer = '';
+      let bufferChanged = false;
+      const flush = () => {
+        if (!buffer) return;
+        const escaped = escapeHtml(buffer);
+        html += bufferChanged ? `<mark class="spelling-diff">${escaped}</mark>` : escaped;
+        buffer = '';
+      };
+      operations.forEach((operation) => {
+        const value = operation[side];
+        if (!value) return;
+        const changed = operation.type === 'change';
+        if (buffer && changed !== bufferChanged) flush();
+        bufferChanged = changed;
+        buffer += value;
+      });
+      flush();
+      return html;
+    }
+
+    return {
+      distance: distance[learnerChars.length][correctChars.length],
+      learnerHtml: renderSide('learner'),
+      correctHtml: renderSide('correct'),
+    };
+  }
+
   function cardLectureKeys(card) {
     return card.lectureNumbers.length ? card.lectureNumbers.map(String) : ['unassigned'];
   }
@@ -202,10 +274,24 @@
       const outcome = item.outcome || 'correct';
       const symbol = outcome === 'correct' ? '✓' : outcome === 'wrong' ? '×' : '→';
       const label = outcome === 'correct' ? '정답' : outcome === 'wrong' ? '오답' : '패스';
+      const learnerAnswer = item.submittedAnswer || '';
+      const correctAnswer = item.correctAnswer || answerForCard(card);
+      const comparison = outcome === 'wrong'
+        ? buildCharacterDiff(learnerAnswer, correctAnswer, item.answerKind === 'scientific')
+        : null;
+      const spellingWarning = comparison && comparison.distance > 0 && comparison.distance <= 3;
+      const learnerHtml = spellingWarning ? comparison.learnerHtml : escapeHtml(learnerAnswer || '미입력(패스)');
+      const correctHtml = spellingWarning ? comparison.correctHtml : escapeHtml(correctAnswer);
       return `<article class="recent-item ${outcome}">
         <span>${symbol}</span>
-        <div><strong>${escapeHtml(card.koreanName)}</strong><em>${escapeHtml(card.scientificName)}</em></div>
-        <small>${label}</small>
+        <div class="recent-main">
+          <div class="recent-title"><strong>${escapeHtml(card.koreanName)}</strong><em>${escapeHtml(card.scientificName)}</em></div>
+          <div class="answer-comparison">
+            <p><span>내 답</span><b>${learnerHtml}</b></p>
+            <p><span>정답</span><b>${correctHtml}</b></p>
+          </div>
+        </div>
+        <div class="recent-status"><small>${label}</small>${spellingWarning ? '<strong class="spelling-warning">스펠링 주의!</strong>' : ''}</div>
       </article>`;
     }).join('');
   }
@@ -245,7 +331,7 @@
     if (submitted === expected) {
       correct += 1;
       streak += 1;
-      recent.unshift({ cardIndex: deck[position], outcome: 'correct' });
+      recent.unshift({ cardIndex: deck[position], outcome: 'correct', submittedAnswer: els.answerInput.value.trim(), correctAnswer: answer, answerKind: writingMode === 'en-to-ko' ? 'korean' : 'scientific' });
       recent = recent.slice(0, 8);
       els.questionCard.classList.add('correct');
       setFeedback(`정답 — ${answer}`, 'success');
@@ -255,7 +341,7 @@
     } else {
       wrong += 1;
       streak = 0;
-      recent.unshift({ cardIndex: deck[position], outcome: 'wrong' });
+      recent.unshift({ cardIndex: deck[position], outcome: 'wrong', submittedAnswer: els.answerInput.value.trim(), correctAnswer: answer, answerKind: writingMode === 'en-to-ko' ? 'korean' : 'scientific' });
       recent = recent.slice(0, 8);
       els.questionCard.classList.add('wrong');
       setFeedback(`오답 — 정답: ${answer}`, 'error');
@@ -270,7 +356,7 @@
     const card = currentCard();
     skipped += 1;
     streak = 0;
-    recent.unshift({ cardIndex: deck[position], outcome: 'skipped' });
+    recent.unshift({ cardIndex: deck[position], outcome: 'skipped', submittedAnswer: '', correctAnswer: answerForCard(card), answerKind: writingMode === 'en-to-ko' ? 'korean' : 'scientific' });
     recent = recent.slice(0, 8);
     els.questionCard.classList.add('skipped');
     setFeedback(`패스 — 정답: ${answerForCard(card)}`, 'skip');
